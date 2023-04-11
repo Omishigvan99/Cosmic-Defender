@@ -3,9 +3,13 @@ import os
 import random
 import game_objects
 
+pygame.font.init()
+
+PAUSE = False
 WIDTH = 1000
 HEIGHT = 700
 WIN = pygame.display.set_mode(size=(WIDTH, HEIGHT))
+pygame.display.set_caption("Cosmic Defender")
 
 FPS = 60
 
@@ -13,9 +17,19 @@ NO_OF_METEORS = 5
 SPACESHIP_NO = 2
 SPACESHIP_VELOCITY = 10
 GAME_BACKGROUND = 1
+SPACESHIP_HEALTH = 100
+HEALTH_DECREMENT_FACTOR = 10
+SCORE_INCREMENT_FACTOR = 1
+METEOR_HIT_INCREMENT_FACTOR = 5
+SPACESHIP_HEALTH_FONT = pygame.font.SysFont("comicsans", 40)
+SCORE = 0
+SCORE_FONT = pygame.font.SysFont("comicsans", 40)
 
 meteorList = []
 missileList = []
+
+SPACESHIP_HIT = pygame.USEREVENT+1
+INCREMENT_SCORE = pygame.USEREVENT+2
 
 
 def getScaledSize(image):
@@ -30,8 +44,16 @@ size = getScaledSize(bg)
 
 
 def drawFrame(spaceship):
-    WIN.fill(pygame.Color(255, 255, 255))
     WIN.blit(pygame.transform.scale(bg, size=size), dest=(0, 0))
+    spaceship_heath_text = SPACESHIP_HEALTH_FONT.render(
+        "HEALTH: "+str(SPACESHIP_HEALTH), 1, pygame.Color(255, 255, 255))
+
+    score_text = SCORE_FONT.render(
+        "SCORE: "+str(SCORE), 1, pygame.Color(255, 255, 255))
+
+    WIN.blit(spaceship_heath_text, (0, 0))
+    WIN.blit(score_text, (WIDTH-score_text.get_width(), 0))
+
     spaceship.draw()
 
     global meteorList
@@ -70,31 +92,47 @@ def generateMeteors(num):
     return meteorList
 
 
-def checkMeteorCollision():
+def checkCollisions(spaceship):
+    global meteorList, missileList, SCORE
+
     for meteor in meteorList:
-        if (meteor.y >= HEIGHT):
+        if (meteor.y > HEIGHT):
             meteorList.remove(meteor)
             meteorList.append(game_objects.Meteor(random.randrange(
-                0, 950), -random.randrange(100, 700), WIN))
-            break
+                0, 950), random.randrange(-700, -100), WIN=WIN))
 
+        if (spaceship.spaceshipRect.colliderect(meteor.meteorRect)):
+            pygame.event.post(pygame.event.Event(SPACESHIP_HIT))
+            meteorList.remove(meteor)
+            meteorList.append(game_objects.Meteor(random.randrange(
+                0, 950), random.randrange(-700, -100), WIN=WIN))
 
-def checkMissileCollision():
-    global missileList
     for missile in missileList:
-        if (missile.y < 0):
+        if (missile.y < 0-missile.getHeight()):
             missileList.remove(missile)
-            break
+
+    try:
+        for missile in missileList:
+            for meteor in meteorList:
+                if (meteor.meteorRect.colliderect(missile.missileRect)):
+                    meteorList.remove(meteor)
+                    meteorList.append(game_objects.Meteor(random.randrange(
+                        0, 950), random.randrange(-700, -100), WIN=WIN))
+                    missileList.remove(missile)
+                    SCORE += METEOR_HIT_INCREMENT_FACTOR
+    except Exception as e:
+        print(e)
 
 
 def main():
 
     clock = pygame.time.Clock()
+    pygame.time.set_timer(INCREMENT_SCORE, 1000)
 
     spaceship = game_objects.Spaceship(
         (WIDTH//2), HEIGHT, WIN, SPACESHIP_NO, SPACESHIP_VELOCITY)
 
-    global meteorList, bulletList
+    global meteorList, SCORE, SPACESHIP_HEALTH, PAUSE
     meteorList = generateMeteors(NO_OF_METEORS)
 
     run = True
@@ -104,18 +142,31 @@ def main():
             if (event.type == pygame.QUIT):
                 run = False
 
-            if (event.type == pygame.KEYDOWN):
-                if (event.key == pygame.K_SPACE and len(missileList) < 2):
-                    missileList.append(
-                        game_objects.Missile(spaceship.x + (spaceship.getWidth()//2)-5, spaceship.y, WIN))
+            if (not PAUSE):
+                if (event.type == INCREMENT_SCORE):
+                    SCORE += 10
 
-        keys_pressed = pygame.key.get_pressed()
-        handleSpaceShipMovement(spaceship, keys_pressed)
+                if event.type == SPACESHIP_HIT:
+                    SPACESHIP_HEALTH -= 10
+                    if (SPACESHIP_HEALTH <= 0):
+                        print("Game Over")
+                        drawFrame(spaceship)
+                        PAUSE = True
 
-        checkMeteorCollision()
-        checkMissileCollision()
+                if (event.type == pygame.KEYDOWN):
+                    if (event.key == pygame.K_SPACE and len(missileList) < 4):
+                        missileList.append(
+                            game_objects.Missile(spaceship.x+15, spaceship.y, WIN))
+                        missileList.append(
+                            game_objects.Missile(spaceship.x+spaceship.getWidth()-20, spaceship.y, WIN))
 
-        drawFrame(spaceship)
+        if (not PAUSE):
+            keys_pressed = pygame.key.get_pressed()
+            handleSpaceShipMovement(spaceship, keys_pressed)
+
+            checkCollisions(spaceship=spaceship)
+
+            drawFrame(spaceship)
 
 
 if __name__ == "__main__":

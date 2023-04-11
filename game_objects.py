@@ -38,6 +38,8 @@ class Spaceship():
 
     def draw(self):
         self.WIN.blit(self.SPACESHIP, dest=(self.x, self.y))
+        self.spaceshipRect.x = self.x
+        self.spaceshipRect.y = self.y
 
     def getWidth(self):
         return self.SCALED_SPACESHIP_IMAGE_WIDTH
@@ -74,6 +76,7 @@ class Meteor():
 
     def update(self):
         self.y += self.METEOR_VELOCITY
+        self.meteorRect.y = self.y
 
     def getWidth(self):
         return self.SCALED_METEOR_IMAGE_WIDTH
@@ -97,7 +100,7 @@ class Missile():
         self.x = x
         self.y = y
         self.WIN = WIN
-        self.bulletRect = pygame.Rect(
+        self.missileRect = pygame.Rect(
             self.x, self.y, int(self.SCALED_MISSILE_IMAGE_WIDTH), int(self.SCALED_MISSILE_IMAGE_HEIGHT))
 
     def draw(self):
@@ -106,3 +109,10 @@ class Missile():
 
     def update(self):
         self.y -= self.VELOCITY
+        self.missileRect.y = self.y
+
+    def getHeight(self):
+        return self.SCALED_MISSILE_IMAGE_HEIGHT
+
+    def getWidth(self):
+        return self.SCALED_MISSILE_IMAGE_WIDTH
