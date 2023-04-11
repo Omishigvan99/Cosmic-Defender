@@ -5,6 +5,7 @@ import game_objects
 import DB
 
 pygame.font.init()
+pygame.mixer.init()
 
 PAUSE = False
 WIDTH = 1000
@@ -25,6 +26,15 @@ SPACESHIP_HEALTH_FONT = pygame.font.SysFont("comicsans", 40)
 SCORE = 0
 SCORE_FONT = pygame.font.SysFont("comicsans", 40)
 GAME_OVER_FONT = pygame.font.SysFont("comicsans", 100)
+
+MISSILE_LAUNCH_SFX = pygame.mixer.Sound(
+    os.path.join('assets', 'SFX', 'MissileLaunch.mp3'))
+METEOR_EXPLOSION_SFX = pygame.mixer.Sound(
+    os.path.join('assets', 'SFX', 'MeteorExplosion.mp3'))
+HIT_SOMETHING_SFX = pygame.mixer.Sound(
+    os.path.join('assets', 'SFX', 'HitSomething.mp3'))
+SPACESHIP_DESTROYED = pygame.mixer.Sound(
+    os.path.join('assets', 'SFX', 'SpaceshipDestroyed.mp3'))
 
 meteorList = []
 missileList = []
@@ -117,6 +127,7 @@ def checkCollisions(spaceship):
         for missile in missileList:
             for meteor in meteorList:
                 if (meteor.meteorRect.colliderect(missile.missileRect)):
+                    pygame.mixer.Sound.play(METEOR_EXPLOSION_SFX)
                     meteorList.remove(meteor)
                     meteorList.append(game_objects.Meteor(random.randrange(
                         0, 950), random.randrange(-700, -100), WIN=WIN))
@@ -168,8 +179,10 @@ def main(name, spaceship_no, level):
                     SCORE += 10
 
                 if event.type == SPACESHIP_HIT:
+                    pygame.mixer.Sound.play(HIT_SOMETHING_SFX)
                     SPACESHIP_HEALTH -= 10
                     if (SPACESHIP_HEALTH <= 0):
+                        pygame.mixer.Sound.play(SPACESHIP_DESTROYED)
                         gameOverText = GAME_OVER_FONT.render(
                             "GAME OVER", 1, pygame.Color(255, 0, 0))
                         drawFrame(spaceship)
@@ -181,6 +194,7 @@ def main(name, spaceship_no, level):
 
                 if (event.type == pygame.KEYDOWN):
                     if (event.key == pygame.K_SPACE and len(missileList) < 4):
+                        pygame.mixer.Sound.play(MISSILE_LAUNCH_SFX)
                         missileList.append(
                             game_objects.Missile(spaceship.x+15, spaceship.y, WIN))
                         missileList.append(
