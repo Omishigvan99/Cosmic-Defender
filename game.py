@@ -2,14 +2,14 @@ import pygame
 import os
 import random
 import game_objects
+import DB
 
 pygame.font.init()
 
 PAUSE = False
 WIDTH = 1000
 HEIGHT = 700
-WIN = pygame.display.set_mode(size=(WIDTH, HEIGHT))
-pygame.display.set_caption("Cosmic Defender")
+WIN = None
 
 FPS = 60
 
@@ -24,6 +24,7 @@ METEOR_HIT_INCREMENT_FACTOR = 5
 SPACESHIP_HEALTH_FONT = pygame.font.SysFont("comicsans", 40)
 SCORE = 0
 SCORE_FONT = pygame.font.SysFont("comicsans", 40)
+GAME_OVER_FONT = pygame.font.SysFont("comicsans", 100)
 
 meteorList = []
 missileList = []
@@ -45,14 +46,6 @@ size = getScaledSize(bg)
 
 def drawFrame(spaceship):
     WIN.blit(pygame.transform.scale(bg, size=size), dest=(0, 0))
-    spaceship_heath_text = SPACESHIP_HEALTH_FONT.render(
-        "HEALTH: "+str(SPACESHIP_HEALTH), 1, pygame.Color(255, 255, 255))
-
-    score_text = SCORE_FONT.render(
-        "SCORE: "+str(SCORE), 1, pygame.Color(255, 255, 255))
-
-    WIN.blit(spaceship_heath_text, (0, 0))
-    WIN.blit(score_text, (WIDTH-score_text.get_width(), 0))
 
     spaceship.draw()
 
@@ -62,6 +55,15 @@ def drawFrame(spaceship):
 
     for missile in missileList:
         missile.draw()
+
+    spaceship_heath_text = SPACESHIP_HEALTH_FONT.render(
+        "HEALTH: "+str(SPACESHIP_HEALTH), 1, pygame.Color(255, 255, 255))
+
+    score_text = SCORE_FONT.render(
+        "SCORE: "+str(SCORE), 1, pygame.Color(255, 255, 255))
+
+    WIN.blit(spaceship_heath_text, (0, 0))
+    WIN.blit(score_text, (WIDTH-score_text.get_width(), 0))
 
     pygame.display.update()
 
@@ -124,15 +126,27 @@ def checkCollisions(spaceship):
         print(e)
 
 
-def main():
+def main(name, spaceship_no, level):
+    global meteorList, SCORE, SPACESHIP_HEALTH, PAUSE, WIN, SPACESHIP_NO, NO_OF_METEORS
+
+    WIN = pygame.display.set_mode(size=(WIDTH, HEIGHT))
+    pygame.display.set_caption("Cosmic Defender")
 
     clock = pygame.time.Clock()
     pygame.time.set_timer(INCREMENT_SCORE, 1000)
 
+    SPACESHIP_NO = spaceship_no
+
+    if (level == 1):
+        NO_OF_METEORS = 3
+    elif level == 2:
+        NO_OF_METEORS = 6
+    else:
+        NO_OF_METEORS = 9
+
     spaceship = game_objects.Spaceship(
         (WIDTH//2), HEIGHT, WIN, SPACESHIP_NO, SPACESHIP_VELOCITY)
 
-    global meteorList, SCORE, SPACESHIP_HEALTH, PAUSE
     meteorList = generateMeteors(NO_OF_METEORS)
 
     run = True
@@ -141,6 +155,13 @@ def main():
         for event in pygame.event.get():
             if (event.type == pygame.QUIT):
                 run = False
+                pygame.quit()
+
+            if (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                if not PAUSE:
+                    PAUSE = True
+                else:
+                    PAUSE = False
 
             if (not PAUSE):
                 if (event.type == INCREMENT_SCORE):
@@ -149,9 +170,14 @@ def main():
                 if event.type == SPACESHIP_HIT:
                     SPACESHIP_HEALTH -= 10
                     if (SPACESHIP_HEALTH <= 0):
-                        print("Game Over")
+                        gameOverText = GAME_OVER_FONT.render(
+                            "GAME OVER", 1, pygame.Color(255, 0, 0))
                         drawFrame(spaceship)
+                        WIN.blit(gameOverText, (WIDTH//2 -
+                                 gameOverText.get_width()//2, HEIGHT//2 - gameOverText.get_height()//2))
+                        pygame.display.update()
                         PAUSE = True
+                        DB.insert_data(name, level, SCORE)
 
                 if (event.type == pygame.KEYDOWN):
                     if (event.key == pygame.K_SPACE and len(missileList) < 4):
@@ -170,4 +196,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main("admin", 2, 3)
